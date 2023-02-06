@@ -7,6 +7,9 @@ from rango.forms import PageForm
 from django.shortcuts import redirect
 from django.urls import reverse
 from rango.forms import UserForm, UserProfileForm
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+
 
 def show_category(request, category_name_slug):
     context_dict = {}
@@ -40,6 +43,7 @@ def about(request):
     context_dict = {'boldmessage': 'This tutorial has been put together by Max Moriarty'}
     return render(request, 'rango/about.html', context = context_dict)
 
+@login_required
 def add_category(request):
     form = CategoryForm()
 
@@ -53,6 +57,7 @@ def add_category(request):
             print(form.errors)
     return render(request, 'rango/add_category.html', {'form':form})
 
+@login_required
 def add_page(request, category_name_slug):
     try:
         category = Category.objects.get(slug=category_name_slug)
@@ -109,3 +114,30 @@ def register(request):
         profile_form = UserProfileForm()
 
     return render(request, 'rango/register.html', context = {'user_form': user_form, 'profile_form': profile_form, 'reigistered': reigistered})
+
+def user_login(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(username=username, password=password)
+
+        if user:
+            if user.is_active:
+                login(request, user)
+                return redirect(reverse('rango:index'))
+            else:
+                return HttpResponse("Your Rango account is disabled.")
+        else:
+            print(f"Invalid login details: {username}, {password}")
+            return HttpResponse("Invalid login details supplied.")
+    else:
+        return render(request, 'rango/login.html')
+
+@login_required
+def restricted(request):
+    return HttpResponse("Since you're logged in you can see this.")
+
+@login_required
+def user_logout(request):
+    logout(request)
+    return redirect(reverse('rango:index'))
